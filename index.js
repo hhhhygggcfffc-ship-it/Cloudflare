@@ -5852,12 +5852,48 @@ class QuantumVLESSUltimate {
   }
 
   async handleUsersAPI(request, path, method) {
-    return new Response(JSON.stringify({ error: 'Not implemented' }), {
-      status: 501,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    const db = this.env.DB;
+    if (!db) {
+      return new Response(JSON.stringify({ error: 'Database D1 not bound' }), { status: 500 });
+    }
+
+    try {
+      // GET /api/users - لیست کاربران
+      if (method === 'GET') {
+        const users = await db.prepare('SELECT * FROM users ORDER BY created_at DESC').all();
+        return new Response(JSON.stringify({ success: true, data: users.results }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // POST /api/users - افزودن کاربر جدید
+      if (method === 'POST') {
+        const body = await request.json();
+        const { username, uuid, email } = body;
+        
+        if (!username || !uuid) {
+          return new Response(JSON.stringify({ error: 'Missing username or uuid' }), { status: 400 });
+        }
+
+        await db.prepare(
+          'INSERT INTO users (uuid, username, email, created_at) VALUES (?, ?, ?, ?)'
+        ).bind(uuid, username, email || '', Date.now()).run();
+
+        return new Response(JSON.stringify({ success: true, message: 'User added to Neural Bridge' }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
+    } catch (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
   }
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🚀 WORKER ENTRY POINT
