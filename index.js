@@ -1721,6 +1721,49 @@ const DATABASE_TRIGGERS = {
   `,
 };
 
+
+
+// Real-Time Traffic Monitoring System
+class TrafficMonitor {
+  constructor(db, config) {
+    this.db = db;
+    this.config = config;
+    this.activeConnections = new Map();
+    this.trafficStats = new Map();
+  }
+  
+  startMonitoring(id, uuid, meta = {}) {
+    this.activeConnections.set(id, {
+      id, uuid, startTime: Date.now(),
+      bytesSent: 0, bytesReceived: 0,
+      lastUpdate: Date.now(), meta
+    });
+  }
+  
+  updateTraffic(id, sent = 0, received = 0) {
+    const conn = this.activeConnections.get(id);
+    if (conn) {
+      conn.bytesSent += sent;
+      conn.bytesReceived += received;
+      conn.lastUpdate = Date.now();
+    }
+  }
+  
+  getUserStats(uuid) {
+    return this.trafficStats.get(uuid) || {
+      connectionCount: 0,
+      totalBytesSent: 0,
+      totalBytesReceived: 0,
+      totalBytes: 0
+    };
+  }
+  
+  getAllStats() {
+    return Object.fromEntries(this.trafficStats);
+  }
+}
+
+
 class DatabaseManager {
   constructor(db, config) {
     this.db = db;
@@ -1729,7 +1772,7 @@ class DatabaseManager {
     this.schemaVersion = DATABASE_SCHEMA.VERSION || '1.0.0';
   }
 
-  async initialize() {
+  async initialize() { try {
     if (this.initialized) return true;
     
     try {
@@ -1752,7 +1795,7 @@ class DatabaseManager {
       for (const table of coreTables) {
         if (table.sql) {
           try {
-            await this.db.prepare(table.sql).run();
+            await (this.db ? this.db.prepare(table.sql).run();
           } catch (e) {
             // Silently skip if table already exists
           }
@@ -1762,7 +1805,7 @@ class DatabaseManager {
       // Initialize Indexes if defined
       if (typeof DATABASE_INDEXES !== 'undefined') {
         for (const [name, sql] of Object.entries(DATABASE_INDEXES)) {
-          try { await this.db.prepare(sql).run(); } catch (e) {}
+          try { await (this.db ? this.db.prepare(sql).run(); } catch (e) {}
         }
       }
 
@@ -1780,9 +1823,9 @@ class DatabaseManager {
     }
   }
   
-  async setConfigValue(key, value) {
+  async setConfigValue(key, value) { try {
     try {
-      await this.db.prepare(`
+      await (this.db ? this.db.prepare(`
         INSERT INTO configuration (key, value, updated_at) 
         VALUES (?, ?, CURRENT_TIMESTAMP)
         ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP
@@ -1792,9 +1835,9 @@ class DatabaseManager {
     }
   }
   
-  async getConfigValue(key, defaultValue = null) {
+  async getConfigValue(key, defaultValue = null) { try {
     try {
-      const result = await this.db.prepare('SELECT value FROM configuration WHERE key = ?').bind(key).first();
+      const result = await (this.db ? this.db.prepare('SELECT value FROM configuration WHERE key = ?').bind(key).first();
       return result ? result.value : defaultValue;
     } catch (error) {
       console.error('Error getting config value:', error);
@@ -1803,11 +1846,11 @@ class DatabaseManager {
   }
   
   // User Management
-  async createUser(data) {
+  async createUser(data) { try {
     const {uuid, username, email, trafficLimit, expiryDate, protocol = 'vless'} = data;
     
     try {
-      const result = await this.db.prepare(`
+      const result = await (this.db ? this.db.prepare(`
         INSERT INTO users (uuid, username, email, traffic_limit, expiry_date, protocol, status)
         VALUES (?, ?, ?, ?, ?, ?, 'active')
       `).bind(uuid, username, email, trafficLimit || 0, expiryDate, protocol).run();
@@ -1819,18 +1862,18 @@ class DatabaseManager {
     }
   }
   
-  async getUser(uuid) {
+  async getUser(uuid) { try {
     try {
-      return await this.db.prepare('SELECT * FROM users WHERE uuid = ?').bind(uuid).first();
+      return await (this.db ? this.db.prepare('SELECT * FROM users WHERE uuid = ?').bind(uuid).first();
     } catch (error) {
       console.error('Error getting user:', error);
       return null;
     }
   }
   
-  async getAllUsers() {
+  async getAllUsers() { try {
     try {
-      const result = await this.db.prepare('SELECT * FROM users ORDER BY created_at DESC').all();
+      const result = await (this.db ? this.db.prepare('SELECT * FROM users ORDER BY created_at DESC').all();
       return result.results || [];
     } catch (error) {
       console.error('Error getting all users:', error);
@@ -1838,7 +1881,7 @@ class DatabaseManager {
     }
   }
   
-  async updateUser(uuid, data) {
+  async updateUser(uuid, data) { try {
     const updates = [];
     const values = [];
     
@@ -1854,7 +1897,7 @@ class DatabaseManager {
     values.push(uuid);
     
     try {
-      await this.db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE uuid = ?`).bind(...values).run();
+      await (this.db ? this.db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE uuid = ?`).bind(...values).run();
       return {success: true};
     } catch (error) {
       console.error('Error updating user:', error);
@@ -1862,9 +1905,9 @@ class DatabaseManager {
     }
   }
   
-  async deleteUser(uuid) {
+  async deleteUser(uuid) { try {
     try {
-      await this.db.prepare('DELETE FROM users WHERE uuid = ?').bind(uuid).run();
+      await (this.db ? this.db.prepare('DELETE FROM users WHERE uuid = ?').bind(uuid).run();
       return {success: true};
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -1873,11 +1916,11 @@ class DatabaseManager {
   }
   
   // Neural Asset Registry Management
-  async addAsset(data) {
+  async addAsset(data) { try {
     const {assetType, value, operator, source, reputationScore = 100, latency = 0} = data;
     
     try {
-      const result = await this.db.prepare(`
+      const result = await (this.db ? this.db.prepare(`
         INSERT INTO neural_asset_registry 
         (asset_type, value, operator, source, reputation_score, latency)
         VALUES (?, ?, ?, ?, ?, ?)
@@ -1890,18 +1933,18 @@ class DatabaseManager {
     }
   }
   
-  async getAsset(value) {
+  async getAsset(value) { try {
     try {
-      return await this.db.prepare('SELECT * FROM neural_asset_registry WHERE value = ?').bind(value).first();
+      return await (this.db ? this.db.prepare('SELECT * FROM neural_asset_registry WHERE value = ?').bind(value).first();
     } catch (error) {
       console.error('Error getting asset:', error);
       return null;
     }
   }
   
-  async getPremiumAssets(limit = 100) {
+  async getPremiumAssets(limit = 100) { try {
     try {
-      const result = await this.db.prepare(`
+      const result = await (this.db ? this.db.prepare(`
         SELECT * FROM v_premium_assets LIMIT ?
       `).bind(limit).all();
       return result.results || [];
@@ -1911,9 +1954,9 @@ class DatabaseManager {
     }
   }
   
-  async updateAssetReputation(value, change) {
+  async updateAssetReputation(value, change) { try {
     try {
-      await this.db.prepare(`
+      await (this.db ? this.db.prepare(`
         UPDATE neural_asset_registry 
         SET reputation_score = MAX(0, MIN(100, reputation_score + ?)),
             last_active = CURRENT_TIMESTAMP
@@ -1926,9 +1969,9 @@ class DatabaseManager {
     }
   }
   
-  async recordAssetPerformance(assetId, result, latency, errorMessage = null) {
+  async recordAssetPerformance(assetId, result, latency, errorMessage = null) { try {
     try {
-      await this.db.prepare(`
+      await (this.db ? this.db.prepare(`
         INSERT INTO neural_asset_performance 
         (asset_id, connection_result, latency_ms, error_message)
         VALUES (?, ?, ?, ?)
@@ -1936,7 +1979,7 @@ class DatabaseManager {
       
       // Update asset stats
       if (result === 'success') {
-        await this.db.prepare(`
+        await (this.db ? this.db.prepare(`
           UPDATE neural_asset_registry 
           SET successful_connections = successful_connections + 1,
               total_connections = total_connections + 1,
@@ -1944,7 +1987,7 @@ class DatabaseManager {
           WHERE id = ?
         `).bind(assetId).run();
       } else {
-        await this.db.prepare(`
+        await (this.db ? this.db.prepare(`
           UPDATE neural_asset_registry 
           SET failed_connections = failed_connections + 1,
               total_connections = total_connections + 1,
@@ -1961,11 +2004,11 @@ class DatabaseManager {
   }
   
   // Security Events
-  async logSecurityEvent(data) {
+  async logSecurityEvent(data) { try {
     const {eventType, severity, ipAddress, userAgent, requestPath, requestMethod, payload} = data;
     
     try {
-      await this.db.prepare(`
+      await (this.db ? this.db.prepare(`
         INSERT INTO security_events 
         (event_type, severity, ip_address, user_agent, request_path, request_method, payload)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -1978,9 +2021,9 @@ class DatabaseManager {
     }
   }
   
-  async getRecentSecurityEvents(hours = 24, limit = 100) {
+  async getRecentSecurityEvents(hours = 24, limit = 100) { try {
     try {
-      const result = await this.db.prepare(`
+      const result = await (this.db ? this.db.prepare(`
         SELECT * FROM security_events 
         WHERE timestamp >= datetime('now', ?)
         ORDER BY timestamp DESC LIMIT ?
@@ -1993,12 +2036,12 @@ class DatabaseManager {
   }
   
   // Blacklist Management
-  async addToBlacklist(ipAddress, reason, duration = null, severity = 'medium') {
+  async addToBlacklist(ipAddress, reason, duration = null, severity = 'medium') { try {
     try {
       const expiresAt = duration ? new Date(Date.now() + duration).toISOString() : null;
       const isPermanent = duration === null ? 1 : 0;
       
-      await this.db.prepare(`
+      await (this.db ? this.db.prepare(`
         INSERT INTO blacklist (ip_address, reason, severity, expires_at, is_permanent)
         VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(ip_address) DO UPDATE SET 
@@ -2013,9 +2056,9 @@ class DatabaseManager {
     }
   }
   
-  async isBlacklisted(ipAddress) {
+  async isBlacklisted(ipAddress) { try {
     try {
-      const result = await this.db.prepare(`
+      const result = await (this.db ? this.db.prepare(`
         SELECT * FROM blacklist 
         WHERE ip_address = ? 
         AND (is_permanent = 1 OR expires_at > datetime('now'))
@@ -2023,7 +2066,7 @@ class DatabaseManager {
       
       if (result) {
         // Update hit count
-        await this.db.prepare(`
+        await (this.db ? this.db.prepare(`
           UPDATE blacklist 
           SET hit_count = hit_count + 1, last_hit = CURRENT_TIMESTAMP
           WHERE ip_address = ?
@@ -2037,9 +2080,9 @@ class DatabaseManager {
     }
   }
   
-  async removeFromBlacklist(ipAddress) {
+  async removeFromBlacklist(ipAddress) { try {
     try {
-      await this.db.prepare('DELETE FROM blacklist WHERE ip_address = ?').bind(ipAddress).run();
+      await (this.db ? this.db.prepare('DELETE FROM blacklist WHERE ip_address = ?').bind(ipAddress).run();
       return {success: true};
     } catch (error) {
       console.error('Error removing from blacklist:', error);
@@ -2048,9 +2091,9 @@ class DatabaseManager {
   }
   
   // System Logs
-  async log(level, component, message, details = null) {
+  async log(level, component, message, details = null) { try {
     try {
-      await this.db.prepare(`
+      await (this.db ? this.db.prepare(`
         INSERT INTO system_logs (level, component, message, details)
         VALUES (?, ?, ?, ?)
       `).bind(level, component, message, JSON.stringify(details)).run();
@@ -2059,7 +2102,7 @@ class DatabaseManager {
     }
   }
   
-  async getLogs(level = null, component = null, limit = 1000) {
+  async getLogs(level = null, component = null, limit = 1000) { try {
     try {
       let query = 'SELECT * FROM system_logs WHERE 1=1';
       const bindings = [];
@@ -2087,9 +2130,9 @@ class DatabaseManager {
   }
   
   // Analytics
-  async recordMetric(metricType, metricValue, dimensions = {}) {
+  async recordMetric(metricType, metricValue, dimensions = {}) { try {
     try {
-      await this.db.prepare(`
+      await (this.db ? this.db.prepare(`
         INSERT INTO analytics 
         (metric_type, metric_value, dimension_1, dimension_2, dimension_3)
         VALUES (?, ?, ?, ?, ?)
@@ -2106,7 +2149,7 @@ class DatabaseManager {
   }
   
   // Cleanup
-  async cleanup() {
+  async cleanup() { try {
     if (!this.config.CLEANUP.ENABLED) return;
     
     try {
@@ -2114,7 +2157,7 @@ class DatabaseManager {
       
       // Clean old logs
       if (OLD_LOGS) {
-        await this.db.prepare(`
+        await (this.db ? this.db.prepare(`
           DELETE FROM system_logs 
           WHERE timestamp < datetime('now', ?)
         `).bind(`-${OLD_LOGS} days`).run();
@@ -2122,7 +2165,7 @@ class DatabaseManager {
       
       // Clean old sessions
       if (OLD_SESSIONS) {
-        await this.db.prepare(`
+        await (this.db ? this.db.prepare(`
           DELETE FROM sessions 
           WHERE expires_at < datetime('now', ?)
         `).bind(`-${OLD_SESSIONS} days`).run();
@@ -2130,7 +2173,7 @@ class DatabaseManager {
       
       // Clean old analytics
       if (OLD_ANALYTICS) {
-        await this.db.prepare(`
+        await (this.db ? this.db.prepare(`
           DELETE FROM analytics 
           WHERE timestamp < datetime('now', ?)
         `).bind(`-${OLD_ANALYTICS} days`).run();
@@ -2138,7 +2181,7 @@ class DatabaseManager {
       
       // Clean old security events
       if (OLD_HONEYPOT) {
-        await this.db.prepare(`
+        await (this.db ? this.db.prepare(`
           DELETE FROM security_events 
           WHERE timestamp < datetime('now', ?) AND is_handled = 1
         `).bind(`-${OLD_HONEYPOT} days`).run();
@@ -2146,26 +2189,26 @@ class DatabaseManager {
       
       // Clean old performance data
       if (OLD_PERFORMANCE) {
-        await this.db.prepare(`
+        await (this.db ? this.db.prepare(`
           DELETE FROM neural_asset_performance 
           WHERE timestamp < datetime('now', ?)
         `).bind(`-${OLD_PERFORMANCE} days`).run();
       }
       
       // Clean expired blacklist entries
-      await this.db.prepare(`
+      await (this.db ? this.db.prepare(`
         DELETE FROM blacklist 
         WHERE is_permanent = 0 AND expires_at < datetime('now')
       `).run();
       
       // Vacuum if enabled
       if (this.config.CLEANUP.VACUUM_ENABLED) {
-        await this.db.prepare('VACUUM').run();
+        await (this.db ? this.db.prepare('VACUUM').run();
       }
       
       // Analyze if enabled
       if (this.config.CLEANUP.ANALYZE_ENABLED) {
-        await this.db.prepare('ANALYZE').run();
+        await (this.db ? this.db.prepare('ANALYZE').run();
       }
       
       console.log('✅ Database cleanup completed');
@@ -2181,7 +2224,7 @@ class DatabaseManager {
   }
   
   // Backup
-  async createBackup() {
+  async createBackup() { try {
     if (!this.config.BACKUP.ENABLED) return {success: false, error: 'Backup not enabled'};
     
     try {
@@ -2189,7 +2232,7 @@ class DatabaseManager {
       const backupType = 'full'; // Could be 'full', 'incremental', or 'differential'
       
       // Record backup metadata
-      await this.db.prepare(`
+      await (this.db ? this.db.prepare(`
         INSERT INTO backups 
         (backup_name, backup_type, status, created_at)
         VALUES (?, ?, 'completed', CURRENT_TIMESTAMP)
@@ -2206,7 +2249,7 @@ class DatabaseManager {
   }
   
   // Statistics
-  async getStatistics() {
+  async getStatistics() { try {
     try {
       const stats = {
         users: {
@@ -2235,7 +2278,7 @@ class DatabaseManager {
       };
       
       // User statistics
-      const userStats = await this.db.prepare(`
+      const userStats = await (this.db ? this.db.prepare(`
         SELECT 
           COUNT(*) as total,
           SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
@@ -2246,7 +2289,7 @@ class DatabaseManager {
       if (userStats) stats.users = userStats;
       
       // Asset statistics
-      const assetStats = await this.db.prepare(`
+      const assetStats = await (this.db ? this.db.prepare(`
         SELECT 
           COUNT(*) as total,
           SUM(CASE WHEN reputation_score >= 70 THEN 1 ELSE 0 END) as premium,
@@ -2260,7 +2303,7 @@ class DatabaseManager {
       if (assetStats) stats.assets = assetStats;
       
       // Security statistics
-      const securityStats = await this.db.prepare(`
+      const securityStats = await (this.db ? this.db.prepare(`
         SELECT 
           COUNT(*) as events_24h,
           COUNT(DISTINCT ip_address) as unique_ips,
@@ -2273,11 +2316,11 @@ class DatabaseManager {
         stats.security.honeypot_triggers = securityStats.honeypot_triggers;
       }
       
-      const blacklistCount = await this.db.prepare('SELECT COUNT(*) as count FROM blacklist').first();
+      const blacklistCount = await (this.db ? this.db.prepare('SELECT COUNT(*) as count FROM blacklist').first();
       if (blacklistCount) stats.security.blocked_ips = blacklistCount.count;
       
       // Connection statistics
-      const connectionStats = await this.db.prepare(`
+      const connectionStats = await (this.db ? this.db.prepare(`
         SELECT 
           SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
           SUM(CASE WHEN connection_time >= datetime('now', 'start of day') THEN 1 ELSE 0 END) as total_today
@@ -2343,7 +2386,7 @@ class AutonomousAIOrchestrator {
     console.log('🧠 Autonomous AI Orchestrator initialized with God Mode capabilities');
   }
 
-  async initialize() {
+  async initialize() { try {
     try {
       await this.updateDynamicCatalog();
       console.log('✅ AI Orchestrator initialized successfully');
@@ -2356,7 +2399,7 @@ class AutonomousAIOrchestrator {
    * 🔄 Update Dynamic Catalog (Auto-Discovery)
    * Queries available models and updates the registry
    */
-  async updateDynamicCatalog() {
+  async updateDynamicCatalog() { try {
     const now = Date.now();
     if (this.dynamicCatalog && (now - this.lastCatalogUpdate) < this.config.CATALOG.UPDATE_INTERVAL) {
       return this.dynamicCatalog;
@@ -2379,7 +2422,7 @@ class AutonomousAIOrchestrator {
   /**
    * 🎯 Select Best Model for Task (Intelligent Routing)
    */
-  async selectModel(tier = 'BALANCED') {
+  async selectModel(tier = 'BALANCED') { try {
     try {
       await this.updateDynamicCatalog();
       
@@ -2474,7 +2517,7 @@ class AutonomousAIOrchestrator {
   /**
    * 🚀 Execute AI Task (Multi-Modal Gateway)
    */
-  async executeTask(taskType, prompt, options = {}) {
+  async executeTask(taskType, prompt, options = {}) { try {
     const startTime = Date.now();
     this.stats.totalCalls++;
     
@@ -2567,7 +2610,7 @@ class AutonomousAIOrchestrator {
   /**
    * 🔄 Hot-Swap Failover (Emergency Model Switch)
    */
-  async hotSwapFailover(originalTier, systemPrompt, prompt, options) {
+  async hotSwapFailover(originalTier, systemPrompt, prompt, options) { try {
     console.log('🔄 Initiating hot-swap failover...');
     
     // Try latency-optimized models as emergency fallback
@@ -2598,7 +2641,7 @@ class AutonomousAIOrchestrator {
   /**
    * 🛡️ Security Check (Llama Guard Integration)
    */
-  async securityCheck(prompt) {
+  async securityCheck(prompt) { try {
     try {
       const guardModels = this.dynamicCatalog.SECURITY_ENFORCERS;
       if (!guardModels || guardModels.length === 0) {
@@ -2653,7 +2696,7 @@ Mode: VISION_ANALYSIS. Analyze images and provide detailed descriptions.`,
   /**
    * ☁️ Call Cloudflare Workers AI
    */
-  async callCloudflareAI(model, systemPrompt, userPrompt, options = {}) {
+  async callCloudflareAI(model, systemPrompt, userPrompt, options = {}) { try {
     // Note: This requires env.AI to be bound in the Worker
     if (!this.env || !this.env.AI) {
       throw new Error('Cloudflare AI binding not available');
@@ -2736,7 +2779,7 @@ Mode: VISION_ANALYSIS. Analyze images and provide detailed descriptions.`,
   /**
    * 🔧 Helper: Analyze Network Logs
    */
-  async analyzeNetworkLogs(logs, options = {}) {
+  async analyzeNetworkLogs(logs, options = {}) { try {
     return await this.executeTask('HIGHEST_REASONING', 
       `Analyze these network logs for DPI patterns, anomalies, and optimization opportunities:\n${JSON.stringify(logs)}`,
       options
@@ -2746,14 +2789,14 @@ Mode: VISION_ANALYSIS. Analyze images and provide detailed descriptions.`,
   /**
    * 🔧 Helper: Quick Response (War Room)
    */
-  async quickResponse(query) {
+  async quickResponse(query) { try {
     return await this.executeTask('LOWEST_LATENCY', query);
   }
 
   /**
    * 🔧 Helper: Security Validation
    */
-  async validateInput(input) {
+  async validateInput(input) { try {
     return await this.executeTask('MAX_SECURITY', input, { requiresSecurityCheck: true });
   }
 }
@@ -2781,7 +2824,7 @@ class NeuralBridgeAPI {
   // MAIN BRIDGE API HANDLER
   // ═══════════════════════════════════════════════════════════════════════════════
   
-  async handleBridgeRequest(request, pathname, method) {
+  async handleBridgeRequest(request, pathname, method) { try {
     // Route to appropriate handler
     if (pathname === '/api/v1/bridge/sync' && method === 'POST') {
       return await this.handleSyncEndpoint(request);
@@ -2817,7 +2860,7 @@ class NeuralBridgeAPI {
   // SYNC ENDPOINT - Main entry point for Rust Scanner
   // ═══════════════════════════════════════════════════════════════════════════════
   
-  async handleSyncEndpoint(request) {
+  async handleSyncEndpoint(request) { try {
     const startTime = Date.now();
     
     try {
@@ -2927,7 +2970,7 @@ class NeuralBridgeAPI {
   // AUTHENTICATION
   // ═══════════════════════════════════════════════════════════════════════════════
   
-  async validateAuthentication(request) {
+  async validateAuthentication(request) { try {
     const bridgeSecret = request.headers.get('X-Bridge-Secret');
     
     if (!bridgeSecret) {
@@ -3010,7 +3053,7 @@ class NeuralBridgeAPI {
   // ASSET PROCESSING - Core Intelligence
   // ═══════════════════════════════════════════════════════════════════════════════
   
-  async processIncomingAssets(assets, metadata) {
+  async processIncomingAssets(assets, metadata) { try {
     let inserted = 0;
     let updated = 0;
     let rejected = 0;
@@ -3076,7 +3119,7 @@ class NeuralBridgeAPI {
   // INSERT NEW ASSET
   // ═══════════════════════════════════════════════════════════════════════════════
   
-  async insertNewAsset(asset, metadata) {
+  async insertNewAsset(asset, metadata) { try {
     try {
       // Calculate initial reputation score based on quality indicators
       let initialReputation = 70; // Base score
@@ -3127,7 +3170,7 @@ class NeuralBridgeAPI {
   // UPDATE EXISTING ASSET
   // ═══════════════════════════════════════════════════════════════════════════════
   
-  async updateExistingAsset(existing, newData) {
+  async updateExistingAsset(existing, newData) { try {
     try {
       // Calculate reputation adjustment
       let reputationChange = 0;
@@ -3202,7 +3245,7 @@ class NeuralBridgeAPI {
   // AI ANALYSIS TRIGGER
   // ═══════════════════════════════════════════════════════════════════════════════
   
-  async triggerAIAnalysis(assets, processResult) {
+  async triggerAIAnalysis(assets, processResult) { try {
     try {
       if (!this.ai || !this.ai.executeTask) {
         console.warn('AI Orchestrator not available for analysis');
@@ -3256,7 +3299,7 @@ Be concise (max 200 words).
   // LOG SYNC EVENT
   // ═══════════════════════════════════════════════════════════════════════════════
   
-  async logSyncEvent(eventData) {
+  async logSyncEvent(eventData) { try {
     try {
       if (!this.db) return;
       
@@ -3288,7 +3331,7 @@ Be concise (max 200 words).
   // STATUS ENDPOINT
   // ═══════════════════════════════════════════════════════════════════════════════
   
-  async handleStatusEndpoint(request) {
+  async handleStatusEndpoint(request) { try {
     try {
       // Get recent sync stats
       const recentSyncs = await this.db.db.prepare(`
@@ -3339,9 +3382,9 @@ Be concise (max 200 words).
   // ASSETS ENDPOINT - Get premium assets
   // ═══════════════════════════════════════════════════════════════════════════════
   
-  async handleAssetsEndpoint(request) {
+  async handleAssetsEndpoint(request) { try {
     try {
-      const url = new URL(request.url);
+      const url = (function() { try { return new URL(request.url); } catch(e) { return null; } })();
       const type = url.searchParams.get('type') || 'IP';
       const limit = Math.min(parseInt(url.searchParams.get('limit') || '100'), 1000);
       const minReputation = parseInt(url.searchParams.get('min_reputation') || '70');
@@ -3383,7 +3426,7 @@ Be concise (max 200 words).
   // ASSET DETAIL ENDPOINT
   // ═══════════════════════════════════════════════════════════════════════════════
   
-  async handleAssetDetailEndpoint(request, value) {
+  async handleAssetDetailEndpoint(request, value) { try {
     try {
       const asset = await this.db.db.prepare(`
         SELECT * FROM neural_asset_registry WHERE value = ?
@@ -3439,7 +3482,7 @@ Be concise (max 200 words).
   // HEALTH REPORT ENDPOINT - For reporting connection success/failure
   // ═══════════════════════════════════════════════════════════════════════════════
   
-  async handleHealthReportEndpoint(request) {
+  async handleHealthReportEndpoint(request) { try {
     try {
       const authResult = await this.validateAuthentication(request);
       if (!authResult.valid) {
@@ -3539,7 +3582,7 @@ Be concise (max 200 words).
   // AUTONOMOUS ASSET SELECTOR - For intelligent asset selection
   // ═══════════════════════════════════════════════════════════════════════════════
   
-  async selectBestAsset(type = 'IP', criteria = {}) {
+  async selectBestAsset(type = 'IP', criteria = {}) { try {
     try {
       const minReputation = criteria.minReputation || 70;
       const preferredOperator = criteria.operator || null;
@@ -3588,7 +3631,7 @@ class TelegramBot {
     this.isProcessing = false;
   }
   
-  async sendMessage(text, options = {}) {
+  async sendMessage(text, options = {}) { try {
     if (!this.config.ENABLED || !this.botToken || !this.chatId) {
       return {success: false, error: 'Telegram not configured'};
     }
@@ -3610,7 +3653,7 @@ class TelegramBot {
     return this.sendMessageDirect(message);
   }
   
-  async sendMessageDirect(message) {
+  async sendMessageDirect(message) { try {
     try {
       const response = await fetch(
         `https://api.telegram.org/bot${this.botToken}/sendMessage`,
@@ -3633,7 +3676,7 @@ class TelegramBot {
       
       // Log to database
       if (this.db) {
-        await this.db.prepare(`
+        await (this.db ? this.db.prepare(`
           INSERT INTO notifications (type, title, message, recipient, channel, status, error_message)
           VALUES (?, ?, ?, ?, 'telegram', 'failed', ?)
         `).bind('error', 'Message Send Failed', message.text, message.chat_id, error.message).run();
@@ -3643,7 +3686,7 @@ class TelegramBot {
     }
   }
   
-  async processQueue() {
+  async processQueue() { try {
     if (this.isProcessing) return;
     
     this.isProcessing = true;
@@ -3662,7 +3705,7 @@ class TelegramBot {
     this.isProcessing = false;
   }
   
-  async sendNotification(type, title, message, data = {}) {
+  async sendNotification(type, title, message, data = {}) { try {
     if (!this.config.NOTIFICATIONS.ENABLED) return;
     
     const notificationTypes = this.config.NOTIFICATIONS;
@@ -3702,7 +3745,7 @@ class TelegramBot {
     return this.sendMessage(text, {priority: type === 'security_alert' ? 10 : 5});
   }
   
-  async handleUpdate(update) {
+  async handleUpdate(update) { try {
     if (!update.message) return;
     
     const message = update.message;
@@ -3725,7 +3768,7 @@ class TelegramBot {
     }
   }
   
-  async handleCommand(chatId, text, isAdmin) {
+  async handleCommand(chatId, text, isAdmin) { try {
     const command = text.split(' ')[0].toLowerCase();
     const args = text.split(' ').slice(1);
     
@@ -3805,7 +3848,7 @@ class TelegramBot {
     }
   }
   
-  async sendStatus(chatId) {
+  async sendStatus(chatId) { try {
     const uptime = '0h 0m'; // Calculate actual uptime
     
     const status = 
@@ -3818,7 +3861,7 @@ class TelegramBot {
     await this.sendMessage(status, {chatId});
   }
   
-  async sendStats(chatId) {
+  async sendStats(chatId) { try {
     if (!this.db) {
       await this.sendMessage('❌ Database not available', {chatId});
       return;
@@ -3852,7 +3895,7 @@ class TelegramBot {
     await this.sendMessage(message, {chatId});
   }
   
-  async sendUsers(chatId) {
+  async sendUsers(chatId) { try {
     if (!this.db) {
       await this.sendMessage('❌ Database not available', {chatId});
       return;
@@ -3881,7 +3924,7 @@ class TelegramBot {
     await this.sendMessage(message, {chatId});
   }
   
-  async sendHealth(chatId) {
+  async sendHealth(chatId) { try {
     const health = {
       database: false,
       ai: false,
@@ -3939,7 +3982,7 @@ class SecurityManager {
     this.loginAttempts = new Map();
   }
   
-  async checkRateLimit(ip) {
+  async checkRateLimit(ip) { try {
     if (!this.config.RATE_LIMITING.ENABLED) return {allowed: true};
     
     const now = Date.now();
@@ -3992,10 +4035,10 @@ class SecurityManager {
     return {allowed: false, retryAfter: this.config.RATE_LIMITING.WINDOW};
   }
   
-  async checkHoneypot(request) {
+  async checkHoneypot(request) { try {
     if (!this.config.HONEYPOT.ENABLED) return {trapped: false};
     
-    const url = new URL(request.url);
+    const url = (function() { try { return new URL(request.url); } catch(e) { return null; } })();
     const path = url.pathname;
     const ip = request.headers.get('CF-Connecting-IP') || 
                request.headers.get('X-Real-IP') || 
@@ -4075,7 +4118,7 @@ class SecurityManager {
     return new Response('404 Not Found', {status: 404});
   }
   
-  async checkBlacklist(ip) {
+  async checkBlacklist(ip) { try {
     if (!this.db) return {blocked: false};
     
     const blocked = await this.db.isBlacklisted(ip);
@@ -4087,7 +4130,7 @@ class SecurityManager {
     return {blocked};
   }
   
-  async checkLoginAttempts(ip, username) {
+  async checkLoginAttempts(ip, username) { try {
     const key = `login:${ip}:${username}`;
     const attempts = this.loginAttempts.get(key) || {count: 0, lastAttempt: Date.now()};
     
@@ -4169,7 +4212,7 @@ class SecurityManager {
     return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
   }
   
-  async verifySession(token) {
+  async verifySession(token) { try {
     if (!this.db) return {valid: false};
     
     try {
@@ -4213,7 +4256,7 @@ class CDNManager {
     this.healthScores = new Map();
   }
   
-  async initialize() {
+  async initialize() { try {
     console.log('🌐 Initializing CDN Manager...');
     
     // Initialize providers
@@ -4238,7 +4281,7 @@ class CDNManager {
     console.log('✅ CDN Manager initialized');
   }
   
-  async loadSNIsFromDatabase() {
+  async loadSNIsFromDatabase() { try {
     try {
       const assets = await this.db.getPremiumAssets(100);
       
@@ -4318,7 +4361,7 @@ class CDNManager {
     return providers[index];
   }
   
-  async selectSNI(provider = null) {
+  async selectSNI(provider = null) { try {
     if (this.sniCache.size === 0) {
       console.warn('No SNIs available in cache');
       return null;
@@ -4348,7 +4391,7 @@ class CDNManager {
     return availableSNIs[0][0];
   }
   
-  async healthCheck() {
+  async healthCheck() { try {
     if (!this.config.ENABLED) return;
     
     console.log('🏥 Running CDN health check...');
@@ -4390,7 +4433,7 @@ class CDNManager {
     }
   }
   
-  async autoDiscoverSNIs() {
+  async autoDiscoverSNIs() { try {
     if (!this.config.SNI_HUNTER.ENABLED || !this.config.SNI_HUNTER.AUTO_DISCOVER) {
       return;
     }
@@ -4469,13 +4512,13 @@ class AnalyticsManager {
     this.lastFlush = Date.now();
   }
   
-  async initialize() {
+  async initialize() { try {
     if (!this.config.ENABLED) return;
     
     console.log('📊 Analytics Manager initialized');
   }
   
-  async recordMetric(type, value, dimensions = {}) {
+  async recordMetric(type, value, dimensions = {}) { try {
     if (!this.config.ENABLED || !this.config.METRICS[type.toUpperCase()]) {
       return;
     }
@@ -4493,7 +4536,7 @@ class AnalyticsManager {
     }
   }
   
-  async flush() {
+  async flush() { try {
     if (this.metricsBuffer.length === 0 || !this.db) return;
     
     try {
@@ -4508,7 +4551,7 @@ class AnalyticsManager {
     }
   }
   
-  async checkAlerts() {
+  async checkAlerts() { try {
     if (!this.config.ALERTS.ENABLED || !this.db) return;
     
     // Check various thresholds and trigger alerts if needed
@@ -4774,7 +4817,7 @@ class VLESSHandler {
     this.config = config;
   }
   
-  async handleRequest(request, user, sni) {
+  async handleRequest(request, user, sni) { try {
     // VLESS protocol implementation
     // This is a simplified version - full implementation would handle:
     // - Protocol handshake
@@ -4807,7 +4850,7 @@ class VLESSHandler {
     return uuidRegex.test(uuid);
   }
   
-  async handleWebSocket(request, user, sni) {
+  async handleWebSocket(request, user, sni) { try {
     const upgradeHeader = request.headers.get('Upgrade');
     if (!upgradeHeader || upgradeHeader !== 'websocket') {
       return new Response('Expected websocket', {status: 400});
@@ -5314,7 +5357,7 @@ class QuantumVLESSUltimate {
   /**
    * 🚀 Initialize All Components
    */
-  async initialize() {
+  async initialize() { try {
     if (this.initialized) return;
     
     console.log('🚀 Initializing Quantum VLESS Ultimate - GOD MODE Edition...');
@@ -5412,13 +5455,13 @@ class QuantumVLESSUltimate {
   /**
    * 🎯 Handle Incoming Request (Main Router)
    */
-  async handleRequest(request) {
+  async handleRequest(request) { try {
     try {
       if (!this.initialized) {
         await this.initialize();
       }
       
-      const url = new URL(request.url);
+      const url = (function() { try { return new URL(request.url); } catch(e) { return null; } })();
       const path = url.pathname;
       const method = request.method;
       
@@ -5558,7 +5601,7 @@ class QuantumVLESSUltimate {
   /**
    * 🤖 Handle AI API Requests
    */
-  async handleAIAPI(request, path, method) {
+  async handleAIAPI(request, path, method) { try {
     if (!this.ai) {
       return new Response(JSON.stringify({ 
         success: false,
@@ -5623,7 +5666,7 @@ class QuantumVLESSUltimate {
   /**
    * 📊 Handle Stats API
    */
-  async handleStatsAPI(request) {
+  async handleStatsAPI(request) { try {
     const stats = {
       version: this.config.VERSION,
       architecture: this.config.ARCHITECTURE,
@@ -5851,55 +5894,65 @@ class QuantumVLESSUltimate {
     });
   }
 
-  async handleUsersAPI(request, path, method) {
+  async handleUsersAPI(request, path, method) { try {
     const db = this.env.DB;
     if (!db) {
-      return new Response(JSON.stringify({ error: 'Database D1 not bound' }), { status: 500 });
+      return new Response(JSON.stringify({ error: 'Database D1 not bound (Check your wrangler.toml)' }), { status: 500 });
     }
 
     try {
-      // GET /api/users - لیست کاربران
+      // 📥 دریافت لیست کامل کاربران برای پنل مدیریت
       if (method === 'GET') {
-        const users = await db.prepare('SELECT * FROM users ORDER BY created_at DESC').all();
-        return new Response(JSON.stringify({ success: true, data: users.results }), {
+        const { results } = await db.prepare('SELECT * FROM users ORDER BY created_at DESC').all();
+        return new Response(JSON.stringify({ success: true, data: results }), {
           status: 200,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
       }
 
-      // POST /api/users - افزودن کاربر جدید
+      // 📤 افزودن، آپدیت یا همگام‌سازی از Neural Bridge
       if (method === 'POST') {
-        const body = await request.json();
-        const { username, uuid, email } = body;
-        
-        if (!username || !uuid) {
-          return new Response(JSON.stringify({ error: 'Missing username or uuid' }), { status: 400 });
+        const payload = await request.json();
+        const { uuid, username, email, expiry, traffic_limit } = payload;
+
+        if (!uuid || !username) {
+          return new Response(JSON.stringify({ error: 'Required fields: uuid, username' }), { status: 400 });
         }
 
-        await db.prepare(
-          'INSERT INTO users (uuid, username, email, created_at) VALUES (?, ?, ?, ?)'
-        ).bind(uuid, username, email || '', Date.now()).run();
+        // عملیات Upsert (درج یا بروزرسانی در صورت تکراری بودن UUID)
+        await db.prepare(`
+          INSERT INTO users (uuid, username, email, expiry, traffic_limit, created_at)
+          VALUES (?, ?, ?, ?, ?, ?)
+          ON CONFLICT(uuid) DO UPDATE SET
+          username = excluded.username,
+          email = excluded.email,
+          expiry = excluded.expiry,
+          traffic_limit = excluded.traffic_limit
+        `).bind(uuid, username, email || '', expiry || 0, traffic_limit || 0, Date.now()).run();
 
-        return new Response(JSON.stringify({ success: true, message: 'User added to Neural Bridge' }), {
-          status: 201,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return new Response(JSON.stringify({ success: true, message: 'Neural Sync Complete' }), { status: 200 });
       }
 
-      return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
-    } catch (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      // 🗑️ حذف کاربر از سیستم
+      if (method === 'DELETE') {
+        const { uuid } = await request.json();
+        await db.prepare('DELETE FROM users WHERE uuid = ?').bind(uuid).run();
+        return new Response(JSON.stringify({ success: true, message: 'User Deleted' }), { status: 200 });
+      }
+
+      return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405 });
+    } catch (err) {
+      console.error('D1 Engine Error:', err);
+      return new Response(JSON.stringify({ error: 'Engine Fault', details: err.message }), { status: 500 });
     }
   }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🚀 WORKER ENTRY POINT
 // ═══════════════════════════════════════════════════════════════════════════════
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env, ctx) { try {
     const app = new QuantumVLESSUltimate(env);
     
     try {
