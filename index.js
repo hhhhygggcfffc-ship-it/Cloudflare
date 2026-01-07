@@ -1546,14 +1546,14 @@ const DATABASE_SCHEMA = {
   neural_asset_registry: `
     CREATE TABLE IF NOT EXISTS neural_asset_registry (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      asset_type TEXT NOT NULL),
+      asset_type TEXT NOT NULL,
       value TEXT NOT NULL UNIQUE,
       operator TEXT,
       country_code TEXT,
       latency INTEGER DEFAULT 0,
       reputation_score INTEGER DEFAULT 100,
-      source TEXT NOT NULL),
-      status TEXT DEFAULT 'active'),
+      source TEXT NOT NULL,
+      status TEXT DEFAULT 'active',
       last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
       last_tested DATETIME,
       successful_connections INTEGER DEFAULT 0,
@@ -1576,13 +1576,13 @@ const DATABASE_SCHEMA = {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       asset_id INTEGER NOT NULL,
       test_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-      connection_result TEXT),
+      connection_result TEXT,
       latency_ms INTEGER,
       speed_mbps REAL,
       packet_loss_percent REAL,
       jitter_ms INTEGER,
       error_message TEXT,
-      test_source TEXT),
+      test_source TEXT,
       metadata TEXT,
       FOREIGN KEY (asset_id) REFERENCES neural_asset_registry(id) ON DELETE CASCADE
     )
@@ -1592,12 +1592,12 @@ const DATABASE_SCHEMA = {
     CREATE TABLE IF NOT EXISTS bridge_sync_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       sync_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-      source TEXT NOT NULL),
+      source TEXT NOT NULL,
       total_assets_received INTEGER DEFAULT 0,
       assets_inserted INTEGER DEFAULT 0,
       assets_updated INTEGER DEFAULT 0,
       assets_rejected INTEGER DEFAULT 0,
-      status TEXT),
+      status TEXT,
       error_message TEXT,
       execution_time_ms INTEGER,
       scanner_version TEXT,
@@ -1611,7 +1611,7 @@ const DATABASE_SCHEMA = {
     CREATE TABLE IF NOT EXISTS neural_ai_analysis (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       analysis_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-      analysis_type TEXT),
+      analysis_type TEXT,
       assets_analyzed INTEGER DEFAULT 0,
       high_quality_assets INTEGER DEFAULT 0,
       suspicious_assets INTEGER DEFAULT 0,
@@ -1628,7 +1628,7 @@ const DATABASE_SCHEMA = {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       event_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
       asset_id INTEGER NOT NULL,
-      event_type TEXT),
+      event_type TEXT,
       old_reputation INTEGER,
       new_reputation INTEGER,
       old_status TEXT,
@@ -1638,7 +1638,7 @@ const DATABASE_SCHEMA = {
       metadata TEXT,
       FOREIGN KEY (asset_id) REFERENCES neural_asset_registry(id) ON DELETE CASCADE
     )
-  `,
+  `
 };
 
 // Database Indexes for Performance
